@@ -25,12 +25,16 @@ typedef enum ActionType {
 	BTN_UNKNOWN
 } ActionType;
 
-typedef struct Action {
-	ActionType action;
+typedef struct JoyAnalog {
 	int16_t lx;
 	int16_t ly;
 	int16_t rx;
 	int16_t ry;
+} JoyAnalog;
+
+typedef struct Action {
+	ActionType action;
+	JoyAnalog joyAnalog;
 	bool sendStick;
 } Action;
 
@@ -61,7 +65,7 @@ void setup_ps2x() {
     case 2:
       Serial.println(" GuitarHero Controller found ");
       break;
-	  case 3:
+	case 3:
       Serial.println(" Wireless Sony DualShock Controller found ");
       break;
    }
@@ -141,10 +145,10 @@ void loop() {
 		}
 
 		act.sendStick = true;
-		act.lx = ps2x.Analog(PSS_LX);
-		act.ly = ps2x.Analog(PSS_LY);
-		act.rx = ps2x.Analog(PSS_RX);
-		act.ry = ps2x.Analog(PSS_RY);
+		act.joyAnalog.lx = ps2x.Analog(PSS_LX);
+		act.joyAnalog.ly = ps2x.Analog(PSS_LY);
+		act.joyAnalog.rx = ps2x.Analog(PSS_RX);
+		act.joyAnalog.ry = ps2x.Analog(PSS_RY);
 		
 		esp_now_send(NULL, (uint8_t*) &act, sizeof(Action));
 	}

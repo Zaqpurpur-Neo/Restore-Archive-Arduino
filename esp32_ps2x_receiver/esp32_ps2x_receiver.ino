@@ -1,6 +1,8 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
+#define BAUD_RATE_STM32 96000
+
 typedef enum ActionType {
 	BTN_UP = 0,
 	BTN_RIGHT,
@@ -9,12 +11,16 @@ typedef enum ActionType {
 	BTN_UNKNOWN
 } ActionType;
 
-typedef struct Action {
-	ActionType action;
+typedef struct JoyAnalog {
 	int16_t lx;
 	int16_t ly;
 	int16_t rx;
 	int16_t ry;
+} JoyAnalog;
+
+typedef struct Action {
+	ActionType action;
+	JoyAnalog joyAnalog;
 	bool sendStick;
 } Action;
 
@@ -24,11 +30,9 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *incomingDataBytes,
 
 	if(actionComing.sendStick) {
 		Serial.print("[Stick]: ");
-        Serial.print("LX: "); Serial.print(actionComing.lx);
-        Serial.print(",  LY: "); Serial.print(actionComing.ly);
-        Serial.print(",  RX: "); Serial.print(actionComing.rx);
-        Serial.print(",  RY: "); Serial.println(actionComing.ry);
-	}
+		JoyAnalog analog = actionComing.joyAnalog;
+		Serial1.write((uint8_t*)&analog, sizeof(analog));
+    }
 
 	Serial.print("[Action]: ");
 	switch (actionComing.action) {
@@ -45,13 +49,15 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *incomingDataBytes,
 			Serial.println("BTN_DOWN");
 			break;
 		default:
-			Serial.println("UNKNOWN");
+			// Serial.println("UNKNOWN");
 			break;
 	}
 }
 
 void setup() {
 	Serial.begin(115200);
+
+	Serial1.begin(BAUD_RATE_STM32);
 
 	WiFi.mode(WIFI_STA);  
 	Serial.print("Receiver MAC: ");
