@@ -7,7 +7,7 @@
 #define PS2_SEL  5  //SS     5
 #define PS2_CLK 18  //SLK   18  
 						
-#define pressures   false
+#define pressures   true 
 #define rumble      false
 
 PS2X ps2x;
@@ -38,11 +38,12 @@ typedef struct Action {
 	bool sendStick;
 } Action;
 
-uint8_t broadcastAddress[] = {0xFC, 0x01, 0x2C, 0xD1, 0x7C, 0x8C};
+// uint8_t broadcastAddress[] = {0xFC, 0x01, 0x2C, 0xD1, 0x7C, 0x8C};
+uint8_t broadcastAddress[] = {0x98, 0x88, 0xE0, 0x03, 0xf8, 0xAC};
 
 void setup_ps2x() {
   Serial.begin(115200);
-
+	
   while (error != 0) {
     delay(1000); 
     error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
@@ -124,33 +125,34 @@ void setup() {
 	setup_sender();
 }
 
+int normalize(int value) {
+	return map(value, 0, 225, -127, 127);
+}
+
 void loop() {
-	if(type == 1) {
-		ps2x.read_gamepad(false, vibrate);
+	ps2x.read_gamepad(false, vibrate);
 
-		Action act = {};
-		act.action = BTN_UNKNOWN;
+	Action act = {};
+	act.action = BTN_UNKNOWN;
 
-		if(ps2x.Button(PSB_PAD_UP)) {
-			act.action = BTN_UP;
-		}
-		if(ps2x.Button(PSB_PAD_RIGHT)){
-			act.action = BTN_RIGHT;
-		}
-		if(ps2x.Button(PSB_PAD_LEFT)){
-			act.action = BTN_LEFT;
-		}
-		if(ps2x.Button(PSB_PAD_DOWN)){
-			act.action = BTN_DOWN;
-		}
-
-		act.sendStick = true;
-		act.joyAnalog.lx = ps2x.Analog(PSS_LX);
-		act.joyAnalog.ly = ps2x.Analog(PSS_LY);
-		act.joyAnalog.rx = ps2x.Analog(PSS_RX);
-		act.joyAnalog.ry = ps2x.Analog(PSS_RY);
-		
-		esp_now_send(NULL, (uint8_t*) &act, sizeof(Action));
+	if(ps2x.Button(PSB_PAD_UP)) {
+		act.action = BTN_UP;
 	}
-	delay(100);
+	if(ps2x.Button(PSB_PAD_RIGHT)){
+		act.action = BTN_RIGHT;
+	}
+	if(ps2x.Button(PSB_PAD_LEFT)){
+		act.action = BTN_LEFT;
+	}
+	if(ps2x.Button(PSB_PAD_DOWN)){
+		act.action = BTN_DOWN;
+	}
+
+	act.sendStick = true;
+	act.joyAnalog.lx = ps2x.Analog(PSS_LX);
+	act.joyAnalog.ly = ps2x.Analog(PSS_LY);
+	act.joyAnalog.rx = ps2x.Analog(PSS_RX);
+	act.joyAnalog.ry = ps2x.Analog(PSS_RY);
+	
+	esp_now_send(NULL, (uint8_t*) &act, sizeof(Action));
 }

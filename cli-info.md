@@ -46,7 +46,15 @@ arduino-cli board listall
 ```
 arduino-cli board details --fqbn STMicroelectronics:stm32:GenF4
 
-arduino-cli upload --fqbn STMicroelectronics:stm32:GenF4:pnum=BlackPill_F411CE,upload_method=dfu,usb=none,usart=enabled_generic stm32_compute_rotation
+arduino-cli compile --fqbn STMicroelectronics:stm32:GenF4 stm32_compute_rotation --verbose
+
+arduino-cli upload --fqbn STMicroelectronics:stm32:GenF4:pnum=BLACKPILL_F411CE,upload_method=dfuMethod,usb=CDCgen,xserial=generic test_stm32 --verbose
+```
+
+# LIB
+``
+arduino-cli lib install --zip-path ./MyModule.zip 
+arduino-cli lib list
 ```
 ---
 

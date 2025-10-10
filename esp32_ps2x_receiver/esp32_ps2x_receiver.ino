@@ -1,7 +1,15 @@
 #include <esp_now.h>
 #include <WiFi.h>
+#include <SerialTransfer.h>
 
-#define BAUD_RATE_STM32 96000
+#define BAUD_RATE_STM32 9600
+#define DEBUG_MODE false 
+
+#define RX 16
+#define TX 15 
+
+HardwareSerial Serial1(1);
+SerialTransfer myTransfer;
 
 typedef enum ActionType {
 	BTN_UP = 0,
@@ -28,36 +36,36 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *incomingDataBytes,
 	Action actionComing;
 	memcpy(&actionComing, incomingDataBytes, sizeof(actionComing));
 
-	if(actionComing.sendStick) {
-		Serial.print("[Stick]: ");
-		JoyAnalog analog = actionComing.joyAnalog;
-		Serial1.write((uint8_t*)&analog, sizeof(analog));
-    }
+	myTransfer.txObj(actionComing);
+	myTransfer.sendData(sizeof(actionComing));
 
-	Serial.print("[Action]: ");
-	switch (actionComing.action) {
-		case BTN_UP:
-			Serial.println("BTN_UP");
-			break;
-		case BTN_LEFT:
-			Serial.println("BTN_LEFT");
-			break;
-		case BTN_RIGHT:
-			Serial.println("BTN_RIGHT");
-			break;
-		case BTN_DOWN:
-			Serial.println("BTN_DOWN");
-			break;
-		default:
-			// Serial.println("UNKNOWN");
-			break;
+	if(DEBUG_MODE) {
+		Serial.print("[Action]: ");
+		switch (actionComing.action) {
+			case BTN_UP:
+				Serial.println("BTN_UP");
+				break;
+			case BTN_LEFT:
+				Serial.println("BTN_LEFT");
+				break;
+			case BTN_RIGHT:
+				Serial.println("BTN_RIGHT");
+				break;
+			case BTN_DOWN:
+				Serial.println("BTN_DOWN");
+				break;
+			default:
+				Serial.println("UNKNOWN");
+				break;
+		}
 	}
 }
 
 void setup() {
 	Serial.begin(115200);
 
-	Serial1.begin(BAUD_RATE_STM32);
+	Serial1.begin(BAUD_RATE_STM32, SERIAL_8N1, RX, TX);
+	myTransfer.begin(Serial1);
 
 	WiFi.mode(WIFI_STA);  
 	Serial.print("Receiver MAC: ");

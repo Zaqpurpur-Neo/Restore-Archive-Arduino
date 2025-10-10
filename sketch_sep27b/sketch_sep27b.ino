@@ -1,18 +1,17 @@
-#define pin_rx 9
-#define pin_tx 10
-
-#define BAUD_RATE 9600
-
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(115200);
-  while(!Serial);
-
-  Serial1.begin(BAUD_RATE);
+  Serial1.begin(115200); // RX1=19, TX1=18
 }
 
 void loop() {
-  Serial1.println("DATA ESP32");
-  Serial.println("Sent: DATA ESP32");
-  delay(1000);
+  if (Serial1.available()) {
+    Serial.print("From ESP32: ");
+    while (Serial1.available()) {
+      Serial.print((char)Serial1.read());
+    }
+    Serial.println();
+  }
+
+  Serial1.println("Hello from STM32");
+  delay(1000);
 }
