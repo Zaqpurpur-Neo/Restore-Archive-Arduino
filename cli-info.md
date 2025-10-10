@@ -42,6 +42,12 @@ arduino-cli board list
 arduino-cli board listall
 ```
 
+
+```
+arduino-cli board details --fqbn STMicroelectronics:stm32:GenF4
+
+arduino-cli upload --fqbn STMicroelectronics:stm32:GenF4:pnum=BlackPill_F411CE,upload_method=dfu,usb=none,usart=enabled_generic stm32_compute_rotation
+```
 ---
 
 ### Tips
