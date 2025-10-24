@@ -1,17 +1,12 @@
 void setup() {
-  Serial.begin(115200);
-  Serial1.begin(115200); // RX1=19, TX1=18
+  Serial.begin(115200);                     // USB serial monitor
+  Serial1.begin(9600, SERIAL_8N1, 16, 15);  // RX=16, TX=15
+  Serial.println("ESP32 Transmitter Started");
 }
 
 void loop() {
-  if (Serial1.available()) {
-    Serial.print("From ESP32: ");
-    while (Serial1.available()) {
-      Serial.print((char)Serial1.read());
-    }
-    Serial.println();
-  }
-
-  Serial1.println("Hello from STM32");
-  delay(1000);
+  String message = "Hello STM32!\n";
+  Serial1.print(message);      // Send to STM32
+  Serial.println("Sent: " + message);
+  delay(1000);
 }

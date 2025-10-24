@@ -1,5 +1,3 @@
-#include <SerialTransfer.h>
-
 #define BAUD_RATE_STM32 9600
 
 #define wheel_1_pwm PB8 // fr
@@ -22,16 +20,12 @@ typedef enum ActionType {
 	BTN_UNKNOWN
 } ActionType;
 
-typedef struct JoyAnalog {
+typedef struct Action {
+	ActionType action;
 	int16_t lx;
 	int16_t ly;
 	int16_t rx;
 	int16_t ry;
-} JoyAnalog;
-
-typedef struct Action {
-	ActionType action;
-	JoyAnalog joyAnalog;
 	bool sendStick;
 } Action;
 
@@ -41,33 +35,32 @@ enum Rotation {
   MODE_IDLE
 };
 
-SerialTransfer myTransfer;
-
 void useMode12() {
   analogWriteFrequency(20000);
   analogWriteResolution(12);
 }
 
-int normalize(int value) {
+int normalize(long value) {
 	return map(value, 0, 225, -127, 127);
 }
 
+int MAX_SPEED = 4095;
+int MAP_VALUE = 127;
+int speed = MAX_SPEED/2;
+Action analog;
+
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(57600);
   while(!Serial);
   Serial1.begin(BAUD_RATE_STM32);
-  myTransfer.begin(Serial1);
 
   pinMode(PC13, OUTPUT);
-  digitalWrite(PC13, LOW);
 
-  /*
   useMode12();
   setWheel(wheel_1_pwm, wheel_1_dig);
   setWheel(wheel_2_pwm, wheel_2_dig);
   setWheel(wheel_3_pwm, wheel_3_dig);
   setWheel(wheel_4_pwm, wheel_4_dig);
-  */
 
 }
 
@@ -92,89 +85,65 @@ void motorControl(int pwm, int digital, int speed, Rotation rotation) {
   }
 }
 
-int MAX = 4095;
-int speed = MAX/2;
-Action analog;
+void kinematikProto() {
+  Serial.print("[Analog]");
+  Serial.print(" LX: "); Serial.print(analog.lx);
+  Serial.print(" LY: "); Serial.print(analog.ly);
+  Serial.print(" RX: "); Serial.print(analog.rx);
+  Serial.print(" RY: "); Serial.println(analog.ry);
+
+  int x = normalize(analog.lx);
+  int y = normalize(analog.ly);
+  int rot = normalize(analog.rx);
+
+  int wh1 = x + y + rot;
+  int wh2 = x - y - rot;
+  int wh3 = -x - y + rot;
+  int wh4 = -x + y - rot;
+
+  int speed1 = (wh1 * MAX_SPEED) / MAP_VALUE;
+  int speed2 = (wh2 * MAX_SPEED) / MAP_VALUE;
+  int speed3 = (wh3 * MAX_SPEED) / MAP_VALUE;
+  int speed4 = (wh4 * MAX_SPEED) / MAP_VALUE;
+
+  Rotation dir1 = (speed1 >= 0) ? MODE_FRONT : MODE_BACK;
+  Rotation dir2 = (speed2 >= 0) ? MODE_FRONT : MODE_BACK;
+  Rotation dir3 = (speed3 >= 0) ? MODE_FRONT : MODE_BACK;
+  Rotation dir4 = (speed4 >= 0) ? MODE_FRONT : MODE_BACK;
+
+  motorControl(wheel_1_pwm, wheel_1_dig, speed1, dir1);
+  motorControl(wheel_2_pwm, wheel_2_dig, speed2, dir2);
+  motorControl(wheel_3_pwm, wheel_3_dig, speed3, dir3);
+  motorControl(wheel_4_pwm, wheel_4_dig, speed4, dir4); 
+}
+
 
 void loop() {
-  if (myTransfer.available()) {
-	  myTransfer.rxObj(analog);
+    Serial.println("OK");
+    digitalWrite(PC13, LOW);
+    runStraightFront();
 
-	  Serial.print("[Analog]");
-	  Serial.print(" LX: "); Serial.print(analog.joyAnalog.lx);
-	  Serial.print(" LY: "); Serial.print(analog.joyAnalog.ly);
-	  Serial.print(" RX: "); Serial.print(analog.joyAnalog.rx);
-	  Serial.print(" RY: "); Serial.println(analog.joyAnalog.ry);
+    if(Serial1.available() > 0) {
+      Serial1.readBytes((char*)&analog, sizeof(analog));
 
-	  digitalWrite(PC13, LOW);
-      delay(100);
-      digitalWrite(PC13, HIGH);
-  }
-  delay(100);
+      switch(analog.action) {
+        case BTN_UP:
+          runStraightFront();
+          break;
+        case BTN_DOWN:
+          runStraightBack();
+          break;
+        case BTN_LEFT:
+          runStraightLeft();
+          break;
+        case BTN_RIGHT:
+          runStraightRight();
+          break;
+      }
+    }
 }
 
-void stopWheel() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_IDLE);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_IDLE);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_IDLE);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_IDLE);
-}
 
-void runStraightFront() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_BACK);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_FRONT);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_FRONT);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_BACK);
-}
-
-void runStraightBack() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_FRONT);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_BACK);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_BACK);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_FRONT);
-}
-
-void runStraightLeft() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_BACK);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_BACK);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_FRONT);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_FRONT);
-}
-
-void runStraightRight() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_FRONT);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_FRONT);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_BACK);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_BACK);
-}
-
-void runDiagonalTopLeft() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_BACK);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_IDLE);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_FRONT);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_IDLE);
-}
-
-void runDiagonalBottomRight() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_FRONT);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_IDLE);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_BACK);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_IDLE);
-}
-
-void runDiagonalTopRight() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_IDLE);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_FRONT);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_IDLE);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_BACK);
-}
-
-void runDiagonalBottomLeft() {
-  motorControl(wheel_1_pwm, wheel_1_dig, speed, MODE_IDLE);
-  motorControl(wheel_2_pwm, wheel_2_dig, speed, MODE_BACK);
-  motorControl(wheel_3_pwm, wheel_3_dig, speed, MODE_IDLE);
-  motorControl(wheel_4_pwm, wheel_4_dig, speed, MODE_FRONT);
-}
 
 
 

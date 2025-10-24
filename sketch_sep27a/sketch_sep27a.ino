@@ -1,17 +1,13 @@
-#define BAUD_RATE 9600
-
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-  while(!Serial);
-
-  Serial1.begin(BAUD_RATE);
+  Serial.begin(115200);   // USB serial for monitor
+  Serial1.begin(9600);    // Default UART (check your STM32 board)
+  Serial.println("STM32 Receiver Ready");
 }
 
 void loop() {
-  if (Serial1.available()) {
-    String received = Serial1.readStringUntil('\n');
-    Serial.print("Received from ESP32: ");
-    Serial.println(received);
-  }
+  //if (Serial1.available()) {
+    String data = Serial1.readStringUntil('\n');
+    Serial.print("Received: ");
+    Serial.println(data);
+  //}
 }

@@ -1,15 +1,11 @@
 #include <esp_now.h>
 #include <WiFi.h>
-#include <SerialTransfer.h>
 
 #define BAUD_RATE_STM32 9600
 #define DEBUG_MODE false 
 
 #define RX 16
 #define TX 15 
-
-HardwareSerial Serial1(1);
-SerialTransfer myTransfer;
 
 typedef enum ActionType {
 	BTN_UP = 0,
@@ -19,25 +15,21 @@ typedef enum ActionType {
 	BTN_UNKNOWN
 } ActionType;
 
-typedef struct JoyAnalog {
+typedef struct Action {
+	ActionType action;
 	int16_t lx;
 	int16_t ly;
 	int16_t rx;
 	int16_t ry;
-} JoyAnalog;
-
-typedef struct Action {
-	ActionType action;
-	JoyAnalog joyAnalog;
 	bool sendStick;
 } Action;
 
-void OnDataRecv(const esp_now_recv_info *info, const uint8_t *incomingDataBytes, int len) {
-	Action actionComing;
-	memcpy(&actionComing, incomingDataBytes, sizeof(actionComing));
+Action actionComing;
+bool isDataThere = false;
 
-	myTransfer.txObj(actionComing);
-	myTransfer.sendData(sizeof(actionComing));
+void OnDataRecv(const esp_now_recv_info *info, const uint8_t *incomingDataBytes, int len) {
+	memcpy(&actionComing, incomingDataBytes, sizeof(actionComing));
+	if(!isDataThere) isDataThere = true;
 
 	if(DEBUG_MODE) {
 		Serial.print("[Action]: ");
@@ -62,10 +54,9 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *incomingDataBytes,
 }
 
 void setup() {
+	actionComing.action = BTN_UNKNOWN;
 	Serial.begin(115200);
-
 	Serial1.begin(BAUD_RATE_STM32, SERIAL_8N1, RX, TX);
-	myTransfer.begin(Serial1);
 
 	WiFi.mode(WIFI_STA);  
 	Serial.print("Receiver MAC: ");
@@ -80,4 +71,7 @@ void setup() {
 	esp_now_register_recv_cb(OnDataRecv);
 }
 
-void loop() {}
+void loop() {
+	Serial1.printf("| %d | %d | %d | %d |\n", actionComing.lx, actionComing.ly, actionComing.rx, actionComing.ry);
+	Serial.printf("| %d | %d | %d | %d |\n", actionComing.lx, actionComing.ly, actionComing.rx, actionComing.ry);
+}

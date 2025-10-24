@@ -3,6 +3,6 @@ void setup() {
 }
 
 void loop() {
-	digitalWrite(PC13, HIGH);
+	digitalWrite(PC13, LOW);
 }
 

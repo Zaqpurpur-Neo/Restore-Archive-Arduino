@@ -17,6 +17,9 @@ byte type = 0;
 byte vibrate = 0;
 int tryNum = 1;
 
+unsigned long lastSend = 0;
+const int sendInterval = 10;
+
 typedef enum ActionType {
 	BTN_UP = 0,
 	BTN_RIGHT,
@@ -25,21 +28,18 @@ typedef enum ActionType {
 	BTN_UNKNOWN
 } ActionType;
 
-typedef struct JoyAnalog {
+typedef struct Action {
+	ActionType action;
 	int16_t lx;
 	int16_t ly;
 	int16_t rx;
 	int16_t ry;
-} JoyAnalog;
-
-typedef struct Action {
-	ActionType action;
-	JoyAnalog joyAnalog;
 	bool sendStick;
 } Action;
 
 // uint8_t broadcastAddress[] = {0xFC, 0x01, 0x2C, 0xD1, 0x7C, 0x8C};
-uint8_t broadcastAddress[] = {0x98, 0x88, 0xE0, 0x03, 0xf8, 0xAC};
+uint8_t broadcastAddress[] = {0xA0, 0x85, 0xE3, 0xE7, 0x1D, 0x18};
+// uint8_t broadcastAddress[] = {0x98, 0x88, 0xE0, 0x03, 0xF8, 0xAC};
 
 void setup_ps2x() {
   Serial.begin(115200);
@@ -125,11 +125,8 @@ void setup() {
 	setup_sender();
 }
 
-int normalize(int value) {
-	return map(value, 0, 225, -127, 127);
-}
-
 void loop() {
+	unsigned long now = millis();
 	ps2x.read_gamepad(false, vibrate);
 
 	Action act = {};
@@ -149,10 +146,13 @@ void loop() {
 	}
 
 	act.sendStick = true;
-	act.joyAnalog.lx = ps2x.Analog(PSS_LX);
-	act.joyAnalog.ly = ps2x.Analog(PSS_LY);
-	act.joyAnalog.rx = ps2x.Analog(PSS_RX);
-	act.joyAnalog.ry = ps2x.Analog(PSS_RY);
+	act.lx = ps2x.Analog(PSS_LX);
+	act.ly = ps2x.Analog(PSS_LY);
+	act.rx = ps2x.Analog(PSS_RX);
+	act.ry = ps2x.Analog(PSS_RY);
 	
-	esp_now_send(NULL, (uint8_t*) &act, sizeof(Action));
+	if (now - lastSend > sendInterval) {
+    esp_now_send(NULL, (uint8_t*) &act, sizeof(act));
+    lastSend = now;
+  }
 }
